@@ -1,0 +1,24 @@
+name: geo_expert
+kind: standalone
+version: 0.2.0
+description: Geo/legal preliminary case-check plugin for Hermes.
+
+requires:
+  python: ">=3.11"
+
+tools:
+  - geo_expert.run_preliminary_case_check
+  - geo_expert.search_sop_database
+  - geo_expert.search_legal_database
+  - geo_expert.preview_satellite_overlay
+  - geo_expert.open_last_outputs
+  - geo_expert.handle_approval
+
+skills:
+  - geo-expert-workflow
+
+safety:
+  openEO_real_submit: false
+  geotiff_download: false
+  gee_export: false
+  formal_legal_conclusion: false
