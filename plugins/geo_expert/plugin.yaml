@@ -1,6 +1,6 @@
 name: geo_expert
 kind: standalone
-version: 0.2.0
+version: 0.3.0
 description: Geo/legal preliminary case-check plugin for Hermes.
 
 requires:
@@ -11,8 +11,22 @@ tools:
   - geo_expert.search_sop_database
   - geo_expert.search_legal_database
   - geo_expert.preview_satellite_overlay
+  - geo_expert.satellite_acquire_preview
   - geo_expert.open_last_outputs
   - geo_expert.handle_approval
+  - geo_expert.workflow_list
+  - geo_expert.workflow_show
+  - geo_expert.rag_search_regulations
+  - geo_expert.spatial_query
+  - geo_expert.eo_local_analysis
+  - geo_expert.eo_openeo_status
+  - geo_expert.eo_openeo_prepare
+  - geo_expert.workflow_dry_run
+  - geo_expert.workflow_run
+  - geo_expert.workflow_eval_all
+  - geo_expert.workflow_route
+  - geo_expert.case_plan
+  - geo_expert.case_run
 
 skills:
   - geo-expert-workflow

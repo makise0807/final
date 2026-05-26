@@ -5,6 +5,11 @@ import json
 from pathlib import Path
 from typing import Any
 
+from .adapters.eo_tools import eo_local_analysis, openeo_status, prepare_openeo_request
+from .adapters.rag_tools import search_regulations as adapter_search_regulations
+from .adapters.satellite_tools import acquire_satellite_preview
+from .adapters.spatial_tools import spatial_query as adapter_spatial_query
+from .adapters.workflow_tools import list_workflows, show_workflow
 from .geo_database.case_report import build_case_report
 from .geo_database.detection_overlay_preview_renderer import (
     render_detection_overlay_preview,
@@ -13,6 +18,7 @@ from .geo_database.image_provider_local import load_local_image_fixture
 from .geo_database.image_recognition_detector import run_detector
 from .geo_database.legal_database import search_legal_database as _search_legal_database
 from .geo_database.sop_workflow import match_sop_candidates, retrieve_sop_candidates
+from .workflow_runner import eval_all_workflows, run_workflow
 
 
 PLUGIN_ROOT = Path(__file__).resolve().parent
@@ -578,6 +584,20 @@ def preview_satellite_overlay_handler(args: dict, **_kwargs) -> str:
     )
 
 
+def satellite_acquire_preview_handler(args: dict, **_kwargs) -> str:
+    return _json(
+        acquire_satellite_preview(
+            aoi=args.get("aoi"),
+            bbox=args.get("bbox"),
+            case_id=str(args.get("case_id") or ""),
+            workflow_id=str(args.get("workflow_id") or ""),
+            mode=str(args.get("mode") or "prepare_only"),
+            provider=str(args.get("provider") or ""),
+            time_range=list(args.get("time_range") or []),
+        )
+    )
+
+
 def open_last_outputs_handler(args: dict, **_kwargs) -> str:
     output_dir = _as_output_dir(args.get("output_dir"))
     return _json(
@@ -603,3 +623,186 @@ def handle_approval_handler(args: dict, **_kwargs) -> str:
             "message": "Decision recorded. No high-risk action was executed.",
         }
     )
+
+
+def workflow_list_handler(args: dict, **_kwargs) -> str:
+    return _json(list_workflows())
+
+
+def workflow_show_handler(args: dict, **_kwargs) -> str:
+    return _json(show_workflow(str(args.get("workflow_id") or "")))
+
+
+def rag_search_regulations_handler(args: dict, **_kwargs) -> str:
+    query = str(args.get("query") or "")
+    top_k = int(args.get("top_k", 5))
+    source_filter = args.get("source_filter")
+    return _json(adapter_search_regulations(query, source_filter=source_filter, top_k=top_k))
+
+
+def spatial_query_handler(args: dict, **_kwargs) -> str:
+    operation = str(args.get("operation") or "")
+    parameters = args.get("parameters") or {}
+    return _json(adapter_spatial_query(operation, parameters))
+
+
+def eo_local_analysis_handler(args: dict, **_kwargs) -> str:
+    operation = str(args.get("operation") or "")
+    parameters = args.get("parameters") or {}
+    return _json(eo_local_analysis(operation, parameters))
+
+
+def eo_openeo_status_handler(args: dict, **_kwargs) -> str:
+    return _json(openeo_status())
+
+
+def eo_openeo_prepare_handler(args: dict, **_kwargs) -> str:
+    operation = str(args.get("operation") or "")
+    parameters = args.get("parameters") or {}
+    return _json(prepare_openeo_request(operation, parameters))
+
+
+def _fallback_sop_candidates() -> list[dict[str, Any]]:
+    return [
+        {
+            "sop_id": "WF-001",
+            "workflow_id": "WF-001",
+            "title": "農業區違章工廠盤查",
+            "score": 0.5,
+            "matched_terms": ["違章建築", "違章工廠", "農業區"],
+        }
+    ]
+
+
+def _selected_sop_title(sop_match: dict[str, Any]) -> str:
+    selected = sop_match.get("selected_sop")
+    if isinstance(selected, dict):
+        title = (
+            selected.get("title")
+            or selected.get("selected_sop_title")
+            or sop_match.get("selected_sop_title")
+            or sop_match.get("title")
+            or "農業區違章工廠盤查"
+        )
+    else:
+        title = (
+            sop_match.get("selected_sop_title")
+            or sop_match.get("title")
+            or "農業區違章工廠盤查"
+        )
+    if _selected_sop_id(sop_match) == "WF-001":
+        return "農業區違章工廠盤查"
+    return str(title)
+
+
+def workflow_dry_run_handler(args: dict, **_kwargs) -> str:
+    return _json(
+        run_workflow(
+            workflow_id=str(args.get("workflow_id") or ""),
+            user_request=str(args.get("user_request") or ""),
+            inputs=dict(args.get("inputs") or {}),
+            mode="dry_run",
+            require_approval=bool(args.get("require_approval", False)),
+        )
+    )
+
+
+def workflow_run_handler(args: dict, **_kwargs) -> str:
+    return _json(
+        run_workflow(
+            workflow_id=str(args.get("workflow_id") or ""),
+            user_request=str(args.get("user_request") or ""),
+            inputs=dict(args.get("inputs") or {}),
+            mode=str(args.get("mode") or "safe_run"),
+            require_approval=bool(args.get("require_approval", False)),
+        )
+    )
+
+
+def workflow_eval_all_handler(args: dict, **_kwargs) -> str:
+    return _json(eval_all_workflows(mode=str(args.get("mode") or "dry_run")))
+
+
+def _fallback_sop_candidates() -> list[dict[str, Any]]:
+    return [
+        {
+            "sop_id": "WF-001",
+            "workflow_id": "WF-001",
+            "title": "農業區違章工廠盤查",
+            "score": 0.5,
+            "matched_terms": ["違章建築", "違章工廠", "農業區"],
+        }
+    ]
+
+
+def _selected_sop_title(sop_match: dict[str, Any]) -> str:
+    selected = sop_match.get("selected_sop")
+    if isinstance(selected, dict):
+        title = (
+            selected.get("title")
+            or selected.get("selected_sop_title")
+            or sop_match.get("selected_sop_title")
+            or sop_match.get("title")
+            or "農業區違章工廠盤查"
+        )
+    else:
+        title = (
+            sop_match.get("selected_sop_title")
+            or sop_match.get("title")
+            or "農業區違章工廠盤查"
+        )
+    if _selected_sop_id(sop_match) == "WF-001":
+        return "農業區違章工廠盤查"
+    return str(title)
+
+
+def search_sop_database_handler(args: dict, **_kwargs) -> str:
+    from .adapters.workflow_tools import route_workflow
+
+    query = str(args.get("query") or "")
+    limit = int(args.get("limit", 5))
+    routed = route_workflow(query, limit=limit)
+    results = [
+        {
+            "workflow_id": item.get("workflow_id"),
+            "sop_id": item.get("workflow_id"),
+            "title": item.get("title"),
+            "selected_sop_title": item.get("title"),
+            "score": item.get("score"),
+            "matched_terms": item.get("matched_terms") or [],
+            "reason": item.get("reason"),
+        }
+        for item in (routed.get("candidates") or [])
+    ]
+    if not results:
+        raw_results = retrieve_sop_candidates(query)
+        results = _normalize_sop_candidates(raw_results)[:limit]
+        if not results:
+            results = _fallback_sop_candidates()[:limit]
+        for item in results:
+            item.setdefault("selected_sop_title", item.get("title"))
+    return _json({"success": True, "results": results, "needs_clarification": routed.get("needs_clarification", False)})
+
+
+def workflow_route_handler(args: dict, **_kwargs) -> str:
+    from .adapters.workflow_tools import route_workflow
+
+    return _json(route_workflow(str(args.get("query") or ""), limit=int(args.get("limit", 5))))
+
+
+def case_plan_handler(args: dict, **_kwargs) -> str:
+    from .workflow_collaboration import plan_case_workflow
+
+    return _json(plan_case_workflow(str(args.get("user_request") or ""), inputs=dict(args.get("inputs") or {})))
+
+
+def case_run_handler(args: dict, **_kwargs) -> str:
+    from .workflow_collaboration import execute_case_workflow_plan, plan_case_workflow
+
+    user_request = str(args.get("user_request") or "")
+    inputs = dict(args.get("inputs") or {})
+    mode = str(args.get("mode") or "safe_run")
+    plan = plan_case_workflow(user_request, inputs=inputs)
+    result = execute_case_workflow_plan(plan, mode=mode, inputs=inputs)
+    result["case_plan"] = plan
+    return _json(result)

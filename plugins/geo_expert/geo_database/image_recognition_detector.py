@@ -194,6 +194,7 @@ def _build_mock_bboxes(request: ImageRecognitionRequest) -> list[list[float]]:
             [west + dx * 0.12, south + dy * 0.18, west + dx * 0.28, south + dy * 0.33],
             [west + dx * 0.46, south + dy * 0.40, west + dx * 0.66, south + dy * 0.56],
             [west + dx * 0.62, south + dy * 0.18, west + dx * 0.78, south + dy * 0.30],
+            [west + dx * 0.30, south + dy * 0.62, west + dx * 0.44, south + dy * 0.76],
         ],
         [
             [west + dx * 0.18, south + dy * 0.22, west + dx * 0.34, south + dy * 0.38],
@@ -205,6 +206,7 @@ def _build_mock_bboxes(request: ImageRecognitionRequest) -> list[list[float]]:
             [west + dx * 0.10, south + dy * 0.50, west + dx * 0.24, south + dy * 0.68],
             [west + dx * 0.36, south + dy * 0.16, west + dx * 0.54, south + dy * 0.32],
             [west + dx * 0.58, south + dy * 0.48, west + dx * 0.76, south + dy * 0.64],
+            [west + dx * 0.74, south + dy * 0.18, west + dx * 0.88, south + dy * 0.34],
         ],
     ]
     return layouts[variant]

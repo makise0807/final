@@ -42,6 +42,14 @@ def register(ctx) -> None:
         emoji="image",
     )
     ctx.register_tool(
+        name="geo_expert.satellite_acquire_preview",
+        toolset="geo_expert",
+        schema=schemas.SATELLITE_ACQUIRE_PREVIEW_SCHEMA,
+        handler=tools.satellite_acquire_preview_handler,
+        description="Acquire or locate a preliminary satellite preview through EO cache or optional GEE preview.",
+        emoji="satellite",
+    )
+    ctx.register_tool(
         name="geo_expert.open_last_outputs",
         toolset="geo_expert",
         schema=schemas.OPEN_LAST_OUTPUTS_SCHEMA,
@@ -56,6 +64,110 @@ def register(ctx) -> None:
         handler=tools.handle_approval_handler,
         description="Record approval or denial without executing high-risk actions.",
         emoji="shield",
+    )
+    ctx.register_tool(
+        name="geo_expert.workflow_list",
+        toolset="geo_expert",
+        schema=schemas.WORKFLOW_LIST_SCHEMA,
+        handler=tools.workflow_list_handler,
+        description="List Geo Expert workflows from local plugin data.",
+        emoji="list",
+    )
+    ctx.register_tool(
+        name="geo_expert.workflow_show",
+        toolset="geo_expert",
+        schema=schemas.WORKFLOW_SHOW_SCHEMA,
+        handler=tools.workflow_show_handler,
+        description="Show one Geo Expert workflow from local plugin data.",
+        emoji="book",
+    )
+    ctx.register_tool(
+        name="geo_expert.rag_search_regulations",
+        toolset="geo_expert",
+        schema=schemas.RAG_SEARCH_REGULATIONS_SCHEMA,
+        handler=tools.rag_search_regulations_handler,
+        description="Search regulations through the geo_expert RAG adapter.",
+        emoji="scroll",
+    )
+    ctx.register_tool(
+        name="geo_expert.spatial_query",
+        toolset="geo_expert",
+        schema=schemas.SPATIAL_QUERY_SCHEMA,
+        handler=tools.spatial_query_handler,
+        description="Run a geo_expert spatial adapter operation.",
+        emoji="triangle",
+    )
+    ctx.register_tool(
+        name="geo_expert.eo_local_analysis",
+        toolset="geo_expert",
+        schema=schemas.EO_LOCAL_ANALYSIS_SCHEMA,
+        handler=tools.eo_local_analysis_handler,
+        description="Run local-only EO helper operations.",
+        emoji="satellite",
+    )
+    ctx.register_tool(
+        name="geo_expert.eo_openeo_status",
+        toolset="geo_expert",
+        schema=schemas.EO_OPENEO_STATUS_SCHEMA,
+        handler=tools.eo_openeo_status_handler,
+        description="Check OpenEO adapter configuration without submit/download.",
+        emoji="status",
+    )
+    ctx.register_tool(
+        name="geo_expert.eo_openeo_prepare",
+        toolset="geo_expert",
+        schema=schemas.EO_OPENEO_PREPARE_SCHEMA,
+        handler=tools.eo_openeo_prepare_handler,
+        description="Prepare an OpenEO request summary without submit/download/export.",
+        emoji="gear",
+    )
+    ctx.register_tool(
+        name="geo_expert.workflow_dry_run",
+        toolset="geo_expert",
+        schema=schemas.WORKFLOW_DRY_RUN_SCHEMA,
+        handler=tools.workflow_dry_run_handler,
+        description="Validate and plan one Geo Expert workflow without external execution.",
+        emoji="clipboard",
+    )
+    ctx.register_tool(
+        name="geo_expert.workflow_run",
+        toolset="geo_expert",
+        schema=schemas.WORKFLOW_RUN_SCHEMA,
+        handler=tools.workflow_run_handler,
+        description="Run one Geo Expert workflow in dry_run, safe_run, or real_run mode.",
+        emoji="play",
+    )
+    ctx.register_tool(
+        name="geo_expert.workflow_eval_all",
+        toolset="geo_expert",
+        schema=schemas.WORKFLOW_EVAL_ALL_SCHEMA,
+        handler=tools.workflow_eval_all_handler,
+        description="Evaluate all Geo Expert workflows for coverage and safety.",
+        emoji="checklist",
+    )
+    ctx.register_tool(
+        name="geo_expert.workflow_route",
+        toolset="geo_expert",
+        schema=schemas.WORKFLOW_ROUTE_SCHEMA,
+        handler=tools.workflow_route_handler,
+        description="Route a case description to the best Geo Expert workflow.",
+        emoji="route",
+    )
+    ctx.register_tool(
+        name="geo_expert.case_plan",
+        toolset="geo_expert",
+        schema=schemas.CASE_PLAN_SCHEMA,
+        handler=tools.case_plan_handler,
+        description="Create a collaborative case plan before running a workflow.",
+        emoji="plan",
+    )
+    ctx.register_tool(
+        name="geo_expert.case_run",
+        toolset="geo_expert",
+        schema=schemas.CASE_RUN_SCHEMA,
+        handler=tools.case_run_handler,
+        description="Run a collaborative Geo Expert case workflow with a report package.",
+        emoji="play",
     )
 
     skill_path = PLUGIN_ROOT / "skills" / "geo" / "geo-expert-workflow" / "SKILL.md"

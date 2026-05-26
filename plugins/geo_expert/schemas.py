@@ -108,3 +108,191 @@ HANDLE_APPROVAL_SCHEMA = {
         "required": ["decision"]
     }
 }
+
+SATELLITE_ACQUIRE_PREVIEW_SCHEMA = {
+    "name": "geo_expert.satellite_acquire_preview",
+    "description": "Acquire or locate a preliminary satellite preview through EO cache matching or optional GEE thumbnail preview. No OpenEO submit, GeoTIFF download, or export.",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "aoi": {"type": "object"},
+            "bbox": {"type": "object"},
+            "case_id": {"type": "string"},
+            "workflow_id": {"type": "string"},
+            "mode": {
+                "type": "string",
+                "enum": ["prepare_only", "cache_only", "preview"],
+                "default": "prepare_only",
+            },
+            "provider": {"type": "string"},
+            "time_range": {
+                "type": "array",
+                "items": {"type": "string"},
+            },
+        },
+    },
+}
+
+WORKFLOW_LIST_SCHEMA = {
+    "name": "geo_expert.workflow_list",
+    "description": "List workflow metadata from the plugin-local workflow database.",
+    "parameters": {
+        "type": "object",
+        "properties": {}
+    }
+}
+
+WORKFLOW_SHOW_SCHEMA = {
+    "name": "geo_expert.workflow_show",
+    "description": "Show a single workflow by workflow_id from the plugin-local workflow database.",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "workflow_id": {"type": "string"}
+        },
+        "required": ["workflow_id"]
+    }
+}
+
+RAG_SEARCH_REGULATIONS_SCHEMA = {
+    "name": "geo_expert.rag_search_regulations",
+    "description": "Search regulations through the geo_expert RAG adapter with local fallback or structured unavailable response.",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "query": {"type": "string"},
+            "top_k": {"type": "integer", "default": 5},
+            "source_filter": {"type": "string"}
+        },
+        "required": ["query"]
+    }
+}
+
+SPATIAL_QUERY_SCHEMA = {
+    "name": "geo_expert.spatial_query",
+    "description": "Run a PostGIS-backed spatial adapter operation in unavailable-safe mode.",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "operation": {"type": "string"},
+            "parameters": {"type": "object"}
+        },
+        "required": ["operation"]
+    }
+}
+
+EO_LOCAL_ANALYSIS_SCHEMA = {
+    "name": "geo_expert.eo_local_analysis",
+    "description": "Run local-only EO helper operations without external services.",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "operation": {"type": "string"},
+            "parameters": {"type": "object"}
+        },
+        "required": ["operation"]
+    }
+}
+
+EO_OPENEO_STATUS_SCHEMA = {
+    "name": "geo_expert.eo_openeo_status",
+    "description": "Check OpenEO configuration availability without submitting jobs or downloading data.",
+    "parameters": {
+        "type": "object",
+        "properties": {}
+    }
+}
+
+EO_OPENEO_PREPARE_SCHEMA = {
+    "name": "geo_expert.eo_openeo_prepare",
+    "description": "Prepare an OpenEO request summary without submit/download/export.",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "operation": {"type": "string"},
+            "parameters": {"type": "object"}
+        },
+        "required": ["operation"]
+    }
+}
+
+WORKFLOW_DRY_RUN_SCHEMA = {
+    "name": "geo_expert.workflow_dry_run",
+    "description": "Validate and plan a Geo Expert workflow without calling external services.",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "workflow_id": {"type": "string"},
+            "user_request": {"type": "string"},
+            "inputs": {"type": "object"}
+        },
+        "required": ["workflow_id"]
+    }
+}
+
+WORKFLOW_RUN_SCHEMA = {
+    "name": "geo_expert.workflow_run",
+    "description": "Run a Geo Expert workflow in dry_run, safe_run, or real_run mode with high-risk actions still gated.",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "workflow_id": {"type": "string"},
+            "user_request": {"type": "string"},
+            "inputs": {"type": "object"},
+            "mode": {"type": "string", "enum": ["dry_run", "safe_run", "real_run"], "default": "safe_run"},
+            "require_approval": {"type": "boolean", "default": False}
+        },
+        "required": ["workflow_id"]
+    }
+}
+
+WORKFLOW_EVAL_ALL_SCHEMA = {
+    "name": "geo_expert.workflow_eval_all",
+    "description": "Evaluate all 10 Geo Expert workflows in dry_run or safe_run mode.",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "mode": {"type": "string", "enum": ["dry_run", "safe_run"], "default": "dry_run"}
+        }
+    }
+}
+
+WORKFLOW_ROUTE_SCHEMA = {
+    "name": "geo_expert.workflow_route",
+    "description": "Route a natural-language case description to the most relevant Geo Expert workflow, with clarification if confidence is low.",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "query": {"type": "string"},
+            "limit": {"type": "integer", "default": 5}
+        },
+        "required": ["query"]
+    }
+}
+
+CASE_PLAN_SCHEMA = {
+    "name": "geo_expert.case_plan",
+    "description": "Create a collaborative Geo Expert case plan including workflow selection, missing inputs, approval items, and next actions.",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "user_request": {"type": "string"},
+            "inputs": {"type": "object"}
+        },
+        "required": ["user_request"]
+    }
+}
+
+CASE_RUN_SCHEMA = {
+    "name": "geo_expert.case_run",
+    "description": "Plan and execute a Geo Expert case in safe_run or real_run mode, without enabling high-risk actions.",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "user_request": {"type": "string"},
+            "inputs": {"type": "object"},
+            "mode": {"type": "string", "enum": ["safe_run", "real_run"], "default": "safe_run"}
+        },
+        "required": ["user_request"]
+    }
+}

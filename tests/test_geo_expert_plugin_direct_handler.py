@@ -22,6 +22,8 @@ def test_geo_expert_direct_handler(tmp_path: Path) -> None:
     assert payload["success"] is True
     assert payload["selected_sop"] == "WF-001"
     assert payload["selected_sop_title"] == "農業區違章工廠盤查"
+    assert payload["detector_used"] == "mock"
+    assert payload["detection_count"] == 4
     assert Path(payload["report_path"]).exists()
     assert Path(payload["geojson_path"]).exists()
     assert Path(payload["overlay_path"]).exists()
