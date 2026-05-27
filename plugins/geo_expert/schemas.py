@@ -380,3 +380,90 @@ USER_DATA_RAG_ANSWER_SCHEMA = {
         "required": ["pack_id", "query"]
     }
 }
+
+LEGAL_AUDIT_SCHEMA = {
+    "name": "geo_expert.legal_audit",
+    "description": "Audit Geo Expert legal RAG coverage and citation readiness using grounded legal text collections.",
+    "parameters": {"type": "object", "properties": {}},
+}
+
+LEGAL_APPLICABILITY_CHECK_SCHEMA = {
+    "name": "geo_expert.legal_applicability_check",
+    "description": "Run a grounded legal applicability checklist for a workflow or pack. Not a formal legal opinion.",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "user_request": {"type": "string"},
+            "workflow_id": {"type": "string"},
+            "facts": {"type": "object"},
+        },
+        "required": ["user_request"],
+    },
+}
+
+SPATIAL_CAPABILITY_SHOW_SCHEMA = {
+    "name": "geo_expert.spatial_capability_show",
+    "description": "Show available and missing PostGIS layer capabilities and workflow import next actions.",
+    "parameters": {"type": "object", "properties": {}},
+}
+
+PRODUCTION_READINESS_SHOW_SCHEMA = {
+    "name": "geo_expert.production_readiness_show",
+    "description": "Show production readiness score, blockers, approval gates, and cache policy status.",
+    "parameters": {"type": "object", "properties": {"service_coverage": {"type": "object"}}},
+}
+
+RUN_MANIFEST_CREATE_SCHEMA = {
+    "name": "geo_expert.run_manifest_create",
+    "description": "Create a reproducibility manifest for a workflow or pack result.",
+    "parameters": {
+        "type": "object",
+        "properties": {"result": {"type": "object"}},
+        "required": ["result"],
+    },
+}
+
+SERVICE_HEALTH_CHECK_SCHEMA = {
+    "name": "geo_expert.service_health_check",
+    "description": "Check structured health for ChromaDB, PostGIS, detector, satellite cache, GEE, OpenEO, and legal grounding.",
+    "parameters": {"type": "object", "properties": {}},
+}
+
+OPENEO_ACQUISITION_PLAN_SCHEMA = {
+    "name": "geo_expert.openeo_acquisition_plan",
+    "description": "Prepare an approval-gated OpenEO GeoTIFF acquisition plan without submit or download.",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "aoi": {"type": "object"},
+            "date_range": {"type": "object"},
+            "bands": {"type": "array", "items": {"type": "string"}},
+            "resolution": {"type": "integer", "default": 10},
+            "output_format": {"type": "string", "default": "GeoTIFF"},
+        },
+        "required": ["aoi"],
+    },
+}
+
+OPENEO_ACQUISITION_RUN_SCHEMA = {
+    "name": "geo_expert.openeo_acquisition_run",
+    "description": "Run OpenEO acquisition in prepare_only, cache_only, or explicit approval-gated approved_run mode.",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "aoi": {"type": "object"},
+            "date_range": {"type": "object"},
+            "bands": {"type": "array", "items": {"type": "string"}},
+            "resolution": {"type": "integer", "default": 10},
+            "mode": {"type": "string", "enum": ["prepare_only", "cache_only", "approved_run"], "default": "prepare_only"},
+            "approved": {"type": "boolean", "default": False},
+        },
+        "required": ["aoi"],
+    },
+}
+
+GEOTIFF_CACHE_LIST_SCHEMA = {
+    "name": "geo_expert.geotiff_cache_list",
+    "description": "List cached GeoTIFF sidecar metadata from the runtime outputs directory.",
+    "parameters": {"type": "object", "properties": {}},
+}

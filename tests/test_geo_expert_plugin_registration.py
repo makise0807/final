@@ -21,7 +21,7 @@ def test_geo_expert_registration() -> None:
     ctx = FakeCtx()
     register(ctx)
 
-    assert len(ctx.tools) == 27
+    assert len(ctx.tools) == 36
     tool_names = [entry["name"] for entry in ctx.tools]
     for expected in (
         "geo_expert.run_preliminary_case_check",
@@ -40,6 +40,15 @@ def test_geo_expert_registration() -> None:
         "geo_expert.user_data_list",
         "geo_expert.user_data_search",
         "geo_expert.user_data_rag_answer",
+        "geo_expert.legal_audit",
+        "geo_expert.legal_applicability_check",
+        "geo_expert.spatial_capability_show",
+        "geo_expert.production_readiness_show",
+        "geo_expert.run_manifest_create",
+        "geo_expert.service_health_check",
+        "geo_expert.openeo_acquisition_plan",
+        "geo_expert.openeo_acquisition_run",
+        "geo_expert.geotiff_cache_list",
     ):
         assert expected in tool_names
     assert all(entry["toolset"] == "geo_expert" for entry in ctx.tools)

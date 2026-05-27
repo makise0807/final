@@ -19,6 +19,9 @@ CHUNK_OVERLAP = 150
 EMBEDDING_NAME = "deterministic_hash_v1"
 DEFAULT_ST_MODEL = os.getenv("GEO_EXPERT_RAG_EMBEDDING_MODEL", "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2")
 TOKEN_RE = re.compile(r"[\w\u4e00-\u9fff]{1,}", re.UNICODE)
+LAW_NAME_RE = re.compile(r"(?P<law>[一-龥A-Za-z0-9（）()、\-\s]{2,40}(?:法|條例|辦法|規則|自治條例))")
+ARTICLE_RE = re.compile(r"第\s*(?P<article>[0-9一二三四五六七八九十百千零〇]+)\s*條")
+PARAGRAPH_RE = re.compile(r"第\s*(?P<paragraph>[0-9一二三四五六七八九十百千零〇]+)\s*項")
 
 
 class DeterministicHashEmbeddingFunction:
@@ -89,10 +92,27 @@ def _chunk_text(text: str, *, chunk_size: int = CHUNK_SIZE, overlap: int = CHUNK
     return chunks
 
 
+def _split_legal_articles(text: str) -> list[str]:
+    cleaned = str(text or "").strip()
+    if not cleaned:
+        return []
+    matches = list(ARTICLE_RE.finditer(cleaned))
+    if not matches:
+        return _chunk_text(cleaned)
+    chunks: list[str] = []
+    for index, match in enumerate(matches):
+        start = match.start()
+        end = matches[index + 1].start() if index + 1 < len(matches) else len(cleaned)
+        chunk = cleaned[start:end].strip()
+        if chunk:
+            chunks.append(chunk)
+    return chunks or _chunk_text(cleaned)
+
+
 def _infer_source_type(path: Path) -> str:
     lowered = str(path).lower()
-    if "regulation" in lowered or "法" in path.stem:
-        return "regulation"
+    if "regulation" in lowered or "法律" in path.stem or "法" in path.stem:
+        return "legal_text"
     if "workflow" in lowered:
         return "workflow"
     if "expert_knowledge" in lowered:
@@ -103,6 +123,41 @@ def _infer_source_type(path: Path) -> str:
 def _law_name(path: Path) -> str | None:
     stem = path.stem.strip()
     return stem or None
+
+
+def _extract_issue_tags(text: str) -> list[str]:
+    mapping = {
+        "illegal_factory_agriculture": ["違章工廠", "農業區", "農地工廠"],
+        "non_urban_land_use_control": ["非都市土地", "使用管制"],
+        "solar_on_farmland": ["農地種電", "光電", "太陽能"],
+        "river_management_zone": ["河川", "行水區"],
+        "hillside_conservation": ["山坡地", "保育"],
+        "urban_planning_redevelopment_tod": ["都市計畫", "都市更新", "TOD", "都更"],
+        "ecology_sensitive_development": ["生態", "綠網", "敏感區"],
+    }
+    tags = []
+    for tag, keywords in mapping.items():
+        if any(keyword in text for keyword in keywords):
+            tags.append(tag)
+    return tags
+
+
+def _extract_legal_metadata(path: Path, chunk: str) -> dict[str, Any]:
+    law_match = LAW_NAME_RE.search(chunk) or LAW_NAME_RE.search(path.stem)
+    article_match = ARTICLE_RE.search(chunk)
+    paragraph_match = PARAGRAPH_RE.search(chunk)
+    law_name = law_match.group("law").strip() if law_match else _law_name(path)
+    article_no = article_match.group("article").strip() if article_match else None
+    paragraph_no = paragraph_match.group("paragraph").strip() if paragraph_match else None
+    citation_parts = [part for part in [law_name, f"第{article_no}條" if article_no else None, f"第{paragraph_no}項" if paragraph_no else None] if part]
+    return {
+        "law_name": law_name,
+        "article_no": article_no,
+        "paragraph_no": paragraph_no,
+        "issue_tags": _extract_issue_tags(chunk),
+        "citation_key": " ".join(citation_parts).strip() or None,
+        "chunk_kind": "article" if article_no else ("paragraph" if paragraph_no else "unknown"),
+    }
 
 
 def _workflow_docs(path: Path) -> list[tuple[str, str, dict[str, Any]]]:
@@ -134,6 +189,11 @@ def _workflow_docs(path: Path) -> list[tuple[str, str, dict[str, Any]]]:
                         "title": title,
                         "workflow_id": workflow_id,
                         "law_name": None,
+                        "article_no": None,
+                        "paragraph_no": None,
+                        "issue_tags": _extract_issue_tags(text),
+                        "citation_key": None,
+                        "chunk_kind": "explanation",
                         "chunk_index": idx,
                         "filename": path.name,
                     },
@@ -150,12 +210,8 @@ def collect_corpus_documents(
     roots = list(source_roots or [DEFAULT_SOURCE_ROOT])
     candidates = [root / "data" / "regulations" for root in roots]
     candidates.extend([root / "data" / "workflow_db" / "expert_workflows.json" for root in roots])
-    candidates.extend(
-        [
-            plugin_root / "expert_knowledge",
-            plugin_root / "workflow_db" / "expert_workflows.json",
-        ]
-    )
+    candidates.extend([plugin_root / "expert_knowledge", plugin_root / "workflow_db" / "expert_workflows.json"])
+
     docs: list[tuple[str, str, dict[str, Any]]] = []
     scanned_sources: list[str] = []
     skipped_empty_files: list[str] = []
@@ -187,12 +243,13 @@ def collect_corpus_documents(
                 text = path.read_text(encoding="utf-8", errors="ignore")
             except Exception:
                 continue
-            chunks = _chunk_text(text)
+            source_type = _infer_source_type(path)
+            chunks = _split_legal_articles(text) if source_type == "legal_text" else _chunk_text(text)
             if not chunks:
                 skipped_empty_files.append(str(path))
                 continue
-            source_type = _infer_source_type(path)
             for idx, chunk in enumerate(chunks):
+                legal_meta = _extract_legal_metadata(path, chunk) if source_type == "legal_text" else {}
                 docs.append(
                     (
                         _stable_doc_id(path, idx, chunk, source_type),
@@ -202,7 +259,12 @@ def collect_corpus_documents(
                             "source_type": source_type,
                             "title": path.stem,
                             "workflow_id": None,
-                            "law_name": _law_name(path),
+                            "law_name": legal_meta.get("law_name") or _law_name(path),
+                            "article_no": legal_meta.get("article_no"),
+                            "paragraph_no": legal_meta.get("paragraph_no"),
+                            "issue_tags": legal_meta.get("issue_tags") or [],
+                            "citation_key": legal_meta.get("citation_key"),
+                            "chunk_kind": legal_meta.get("chunk_kind") or ("explanation" if source_type == "expert_knowledge" else "unknown"),
                             "chunk_index": idx,
                             "filename": path.name,
                         },

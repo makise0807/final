@@ -10,9 +10,12 @@ from .adapters.detector_tools import detector_status, run_detection
 from .adapters.eo_tools import eo_local_analysis, list_eo_cache_images, openeo_status, prepare_openeo_request, select_eo_cache_image
 from .adapters.rag_tools import search_regulations, search_workflows
 from .adapters.satellite_tools import acquire_satellite_preview, satellite_status
-from .adapters.spatial_tools import spatial_query, spatial_status
+from .adapters.spatial_tools import spatial_capability_profile, spatial_query, spatial_status
 from .adapters.workflow_tools import get_execution_spec, list_workflows
 from .geo_database.image_provider_local import load_local_image_fixture
+from .legal_grounding import build_applicability_check
+from .openeo_acquisition import create_openeo_acquisition_plan
+from .production import append_audit_log, calculate_readiness_score, create_run_manifest
 from .reporting.workflow_report import write_workflow_report
 
 DEFAULT_LIMITATIONS = [
@@ -116,7 +119,39 @@ def _resolve_satellite_inputs(workflow_id: str, inputs: dict[str, Any], mode: st
         enriched["aoi"] = satellite.get("aoi")
     if satellite.get("warnings"):
         enriched["satellite_warnings"] = list(satellite.get("warnings") or [])
+    if enriched.get("require_geotiff"):
+        enriched["openeo_acquisition"] = create_openeo_acquisition_plan(
+            enriched.get("aoi") or enriched.get("bbox"),
+            dict(enriched.get("date_range") or {}),
+            [str(item) for item in list(enriched.get("bands") or ["B04", "B03", "B02", "B08"])],
+            int(enriched.get("resolution") or 10),
+        )
     return enriched
+
+
+def _finalize_production_result(result: dict[str, Any]) -> dict[str, Any]:
+    service_coverage = dict(result.get("service_coverage") or {})
+    result["production_readiness"] = calculate_readiness_score(service_coverage)
+    result["run_manifest"] = create_run_manifest(result)
+    if result.get("openeo_acquisition") or result.get("inputs", {}).get("openeo_acquisition"):
+        result["approval_required_actions"] = list(
+            dict.fromkeys(list(result.get("approval_required_actions") or []) + ["openeo_submit", "geotiff_download"])
+        )
+    try:
+        append_audit_log(
+            {
+                "action": "workflow_run",
+                "handler": "workflow_runner",
+                "run_id": result["run_manifest"].get("run_id"),
+                "approved_actions": [],
+                "external_fetch": False,
+                "generated_artifacts": result["run_manifest"].get("artifacts"),
+                "errors": list(result.get("failed_steps") or []),
+            }
+        )
+    except Exception:
+        pass
+    return result
 
 
 def _wf001_real_detector_enabled(inputs: dict[str, Any]) -> bool:
@@ -128,6 +163,7 @@ def _wf001_real_detector_enabled(inputs: dict[str, Any]) -> bool:
 def _summarize_service_coverage(results: list[dict[str, Any]]) -> dict[str, Any]:
     eo_cache_info = list_eo_cache_images()
     spatial_info = spatial_status()
+    spatial_capability = spatial_capability_profile()
     rag_info = search_regulations("都市計畫", top_k=1)
     detector_info = detector_status()
     sat_info = satellite_status()
@@ -239,6 +275,7 @@ def _summarize_service_coverage(results: list[dict[str, Any]]) -> dict[str, Any]
                 "missing": sum(1 for item in alias_checks if not item.get("exists")),
                 "missing_aliases": missing_aliases,
             },
+            "capability_profile": spatial_capability.get("capability_profile"),
         },
         "eo_cache": {
             "available": bool(eo_cache_info.get("success") and eo_cache_info.get("image_count")),
@@ -466,6 +503,8 @@ def _run_wf001_real_detector(user_request: str, inputs: dict[str, Any], spec: di
                     limitations=list(DEFAULT_LIMITATIONS),
                 )
             )
+    legal_grounding = build_applicability_check(user_request=user_request, workflow_id="WF-001", facts=inputs)
+    spatial_capability = spatial_capability_profile()
     result = {
         "success": bool(compat.get("success")),
         "workflow_id": "WF-001",
@@ -487,12 +526,20 @@ def _run_wf001_real_detector(user_request: str, inputs: dict[str, Any], spec: di
         "report_path": compat.get("report_path"),
         "warnings": list(dict.fromkeys([*(compat.get("warnings") or []), *(detector_result.get("warnings") or [])])),
         "satellite_evidence": inputs.get("satellite_evidence"),
+        "legal_grounding": legal_grounding,
+        "spatial_capability": {
+            "available_layers": [item.get("alias") for item in spatial_capability.get("alias_entries") or [] if item.get("status") == "resolved"],
+            "missing_layers": [item.get("alias") for item in spatial_capability.get("alias_entries") or [] if item.get("status") != "resolved"],
+            "required_data": list((spatial_capability.get("workflow_layer_requirements") or {}).get("WF-001", [])),
+        },
         "recommended_next_actions": [
             "Verify parcel and permit records.",
             "If needed, escalate to field inspection or legal review.",
         ],
         "limitations": list(dict.fromkeys([*(compat.get("limitations") or DEFAULT_LIMITATIONS), *(detector_result.get("limitations") or [])])),
     }
+    result["openeo_acquisition"] = inputs.get("openeo_acquisition")
+    result = _finalize_production_result(result)
     result.update(write_workflow_report(result, inputs.get("workflow_output_root")))
     return result
 
@@ -523,7 +570,9 @@ def run_workflow(
             )
             for step in spec.get("steps") or []
         ]
-        return {
+        legal_grounding = build_applicability_check(user_request=user_request, workflow_id=workflow_id, facts=inputs)
+        spatial_capability = spatial_capability_profile()
+        result = {
             "success": True,
             "workflow_id": workflow_id,
             "title": spec.get("title"),
@@ -541,9 +590,16 @@ def run_workflow(
             "outputs": {},
             "warnings": [],
             "satellite_evidence": inputs.get("satellite_evidence"),
+            "legal_grounding": legal_grounding,
+            "spatial_capability": {
+                "available_layers": [item.get("alias") for item in spatial_capability.get("alias_entries") or [] if item.get("status") == "resolved"],
+                "missing_layers": [item.get("alias") for item in spatial_capability.get("alias_entries") or [] if item.get("status") != "resolved"],
+                "required_data": list((spatial_capability.get("workflow_layer_requirements") or {}).get(workflow_id, [])),
+            },
             "recommended_next_actions": ["Provide any missing inputs, then run safe_run for preliminary evidence gathering."],
             "limitations": list(DEFAULT_LIMITATIONS),
         }
+        return _finalize_production_result(result)
 
     if workflow_id == "WF-001":
         if _wf001_real_detector_enabled(inputs):
@@ -560,6 +616,8 @@ def run_workflow(
                 evidence = {"message": "Step satisfied by compatible WF-001 preliminary workflow run."}
                 status = "success"
             steps.append(_step_result(step, status=status, evidence=evidence, limitations=list(DEFAULT_LIMITATIONS)))
+        legal_grounding = build_applicability_check(user_request=user_request, workflow_id=workflow_id, facts=inputs)
+        spatial_capability = spatial_capability_profile()
         result = {
             "success": bool(compat.get("success")),
             "workflow_id": workflow_id,
@@ -581,12 +639,20 @@ def run_workflow(
             "report_path": compat.get("report_path"),
             "warnings": list(compat.get("warnings") or []),
             "satellite_evidence": inputs.get("satellite_evidence"),
+            "legal_grounding": legal_grounding,
+            "spatial_capability": {
+                "available_layers": [item.get("alias") for item in spatial_capability.get("alias_entries") or [] if item.get("status") == "resolved"],
+                "missing_layers": [item.get("alias") for item in spatial_capability.get("alias_entries") or [] if item.get("status") != "resolved"],
+                "required_data": list((spatial_capability.get("workflow_layer_requirements") or {}).get(workflow_id, [])),
+            },
             "recommended_next_actions": [
                 "Verify parcel and permit records.",
                 "If needed, escalate to field inspection or legal review.",
             ],
             "limitations": list(compat.get("limitations") or DEFAULT_LIMITATIONS),
         }
+        result["openeo_acquisition"] = inputs.get("openeo_acquisition")
+        result = _finalize_production_result(result)
         result.update(write_workflow_report(result, inputs.get("workflow_output_root")))
         return result
 
@@ -595,6 +661,8 @@ def run_workflow(
     degraded_steps = [step["step_id"] for step in step_results if step["status"] == "degraded"]
     approval_required_steps = [step["step_id"] for step in step_results if step["status"] == "approval_required"]
     failed_steps = [step["step_id"] for step in step_results if step["status"] == "failed"]
+    legal_grounding = build_applicability_check(user_request=user_request, workflow_id=workflow_id, facts=inputs)
+    spatial_capability = spatial_capability_profile()
     result = {
         "success": not failed_steps,
         "workflow_id": workflow_id,
@@ -611,12 +679,20 @@ def run_workflow(
         "outputs": {},
         "warnings": warnings,
         "satellite_evidence": inputs.get("satellite_evidence"),
+        "legal_grounding": legal_grounding,
+        "spatial_capability": {
+            "available_layers": [item.get("alias") for item in spatial_capability.get("alias_entries") or [] if item.get("status") == "resolved"],
+            "missing_layers": [item.get("alias") for item in spatial_capability.get("alias_entries") or [] if item.get("status") != "resolved"],
+            "required_data": list((spatial_capability.get("workflow_layer_requirements") or {}).get(workflow_id, [])),
+        },
         "recommended_next_actions": [
             "Review degraded steps and supply missing imagery, AOI, or service configuration.",
             "Use approval flow before any high-risk external execution.",
         ],
         "limitations": list(DEFAULT_LIMITATIONS),
     }
+    result["openeo_acquisition"] = inputs.get("openeo_acquisition")
+    result = _finalize_production_result(result)
     result.update(write_workflow_report(result, inputs.get("workflow_output_root")))
     return result
 
@@ -637,10 +713,27 @@ def eval_all_workflows(mode: str = "dry_run") -> dict[str, Any]:
                 "output_dir": str(Path("outputs") / "geo_expert" / "plugin_direct_test"),
             }
         results.append(run_workflow(workflow_id=workflow_id, user_request=str(item.get("title") or workflow_id), inputs=inputs, mode=mode))
+    coverage = _summarize_service_coverage(results)
+    coverage["production_readiness"] = calculate_readiness_score(coverage)
+    coverage["approval_gates"] = {
+        "default_external_actions_blocked": True,
+        "required_actions": ["openeo_submit", "geotiff_download", "destructive_postgis_import", "paid_api_call"],
+        "approval_gates_open": False,
+    }
+    coverage["openeo_status"] = {
+        "configured": bool(openeo_status().get("success")),
+        "default_mode": "prepare_only",
+        "submit_by_default": False,
+        "download_by_default": False,
+    }
+    coverage["geotiff_cache_status"] = {
+        "cache_dir": str(Path("outputs") / "geo_expert" / "geotiff_cache"),
+        "tracked_by_git": False,
+    }
     return {
         "success": True,
         "mode": mode,
         "count": len(results),
         "results": results,
-        "service_coverage": _summarize_service_coverage(results),
+        "service_coverage": coverage,
     }

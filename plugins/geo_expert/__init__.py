@@ -225,6 +225,78 @@ def register(ctx) -> None:
         description="Answer from imported runtime user data only.",
         emoji="quote",
     )
+    ctx.register_tool(
+        name="geo_expert.legal_audit",
+        toolset="geo_expert",
+        schema=schemas.LEGAL_AUDIT_SCHEMA,
+        handler=tools.legal_audit_handler,
+        description="Audit legal RAG grounding coverage and citation readiness.",
+        emoji="scroll",
+    )
+    ctx.register_tool(
+        name="geo_expert.legal_applicability_check",
+        toolset="geo_expert",
+        schema=schemas.LEGAL_APPLICABILITY_CHECK_SCHEMA,
+        handler=tools.legal_applicability_check_handler,
+        description="Run a grounded legal applicability checklist for expert review draft reporting.",
+        emoji="balance_scale",
+    )
+    ctx.register_tool(
+        name="geo_expert.spatial_capability_show",
+        toolset="geo_expert",
+        schema=schemas.SPATIAL_CAPABILITY_SHOW_SCHEMA,
+        handler=tools.spatial_capability_show_handler,
+        description="Show PostGIS available and missing layer capability tiers with import next actions.",
+        emoji="layers",
+    )
+    ctx.register_tool(
+        name="geo_expert.production_readiness_show",
+        toolset="geo_expert",
+        schema=schemas.PRODUCTION_READINESS_SHOW_SCHEMA,
+        handler=tools.production_readiness_show_handler,
+        description="Show readiness score, blockers, approval gates, and cache policy.",
+        emoji="checklist",
+    )
+    ctx.register_tool(
+        name="geo_expert.run_manifest_create",
+        toolset="geo_expert",
+        schema=schemas.RUN_MANIFEST_CREATE_SCHEMA,
+        handler=tools.run_manifest_create_handler,
+        description="Create a reproducibility manifest for a workflow or pack result.",
+        emoji="clipboard",
+    )
+    ctx.register_tool(
+        name="geo_expert.service_health_check",
+        toolset="geo_expert",
+        schema=schemas.SERVICE_HEALTH_CHECK_SCHEMA,
+        handler=tools.service_health_check_handler,
+        description="Check Geo Expert runtime service health with structured degraded responses.",
+        emoji="status",
+    )
+    ctx.register_tool(
+        name="geo_expert.openeo_acquisition_plan",
+        toolset="geo_expert",
+        schema=schemas.OPENEO_ACQUISITION_PLAN_SCHEMA,
+        handler=tools.openeo_acquisition_plan_handler,
+        description="Prepare an approval-gated OpenEO GeoTIFF acquisition plan.",
+        emoji="satellite",
+    )
+    ctx.register_tool(
+        name="geo_expert.openeo_acquisition_run",
+        toolset="geo_expert",
+        schema=schemas.OPENEO_ACQUISITION_RUN_SCHEMA,
+        handler=tools.openeo_acquisition_run_handler,
+        description="Run OpenEO acquisition in prepare_only, cache_only, or explicit approved_run mode.",
+        emoji="play",
+    )
+    ctx.register_tool(
+        name="geo_expert.geotiff_cache_list",
+        toolset="geo_expert",
+        schema=schemas.GEOTIFF_CACHE_LIST_SCHEMA,
+        handler=tools.geotiff_cache_list_handler,
+        description="List runtime GeoTIFF cache metadata from outputs.",
+        emoji="folder",
+    )
 
     skill_path = PLUGIN_ROOT / "skills" / "geo" / "geo-expert-workflow" / "SKILL.md"
     ctx.register_skill(

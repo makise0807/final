@@ -9,6 +9,16 @@ from ..geo_database.image_recognition_detector import run_detector
 from ..geo_database.image_recognition_ultralytics_adapter import ultralytics_result_to_model_output
 
 
+def _domain_hint_for_workflow(workflow_id: str) -> str:
+    mapping = {
+        "WF-001": "可見物件/結構線索，不可判定工廠性質或違法狀態。",
+        "WF-004": "可見堆置/裸露地線索，不可直接判定污染或廢棄物違規。",
+        "WF-005": "可見規則排列/反光面線索，不可直接判定光電設施合法性。",
+        "WF-009": "可見影像異常區，不可直接判定災害成因或損害程度。",
+    }
+    return mapping.get(workflow_id, "僅能提供一般物件偵測線索，不可直接形成法律或專業定性。")
+
+
 def _read_image_size(image_path: Path) -> tuple[int, int] | None:
     try:
         from PIL import Image
@@ -67,12 +77,16 @@ def _to_detection_payload(
                 "requires_verification": True,
                 "model_name": model_basename,
                 "model_scope": "general_object_detector",
+                "domain_specific": False,
+                "georeference_available": True,
+                "interpretation_allowed": False,
                 "mock_georef": False,
                 "notes": [
                     f"Detector backend: {detector_name}",
                     f"Model: {model_basename}",
                     "Generic pretrained detector output is a visual indicator only.",
                     "YOLO output is pixel-space unless georeference metadata is available.",
+                    _domain_hint_for_workflow(str(request.get("sop_id") or "")),
                 ],
             }
         )
@@ -96,6 +110,9 @@ def _to_detection_payload(
                     "pixel_bbox": item["pixel_bbox"],
                     "model_name": item["model_name"],
                     "model_scope": item["model_scope"],
+                    "domain_specific": item["domain_specific"],
+                    "georeference_available": item["georeference_available"],
+                    "interpretation_allowed": item["interpretation_allowed"],
                     "mock_georef": item["mock_georef"],
                     "notes": item["notes"],
                 },
@@ -120,6 +137,7 @@ def _to_detection_payload(
         "warnings": [
             "Generic YOLO detector output is a visual indicator only, not a legal conclusion.",
             "YOLO output is pixel-space unless georeference metadata is available.",
+            _domain_hint_for_workflow(str(request.get("sop_id") or "")),
         ],
         "limitations": [
             "Preliminary detection only.",
@@ -127,6 +145,11 @@ def _to_detection_payload(
             "YOLO general model is not trained specifically for illegal factory, solar facility, or waste-site detection.",
             "Not a formal legal conclusion.",
             "No GeoTIFF/export/download performed.",
+        ],
+        "detection_limitations": [
+            "Requires human visual review.",
+            "Domain-specific training recommended for production use.",
+            "Interpretation is not allowed as a legal conclusion.",
         ],
         "not_formal_analysis": True,
         "requires_verification": True,
@@ -209,6 +232,34 @@ def _run_yolo_detection(payload: dict[str, Any], cfg: dict[str, Any]) -> dict[st
     return result
 
 
+def _annotate_generic_detector_result(result: dict[str, Any], workflow_id: str) -> dict[str, Any]:
+    result.setdefault("model_scope", "general_object_detector")
+    result.setdefault("domain_specific", False)
+    result.setdefault("interpretation_allowed", False)
+    result.setdefault("detection_limitations", [])
+    result["detection_limitations"] = list(dict.fromkeys(list(result.get("detection_limitations") or []) + [
+        "Requires human visual review.",
+        "Domain-specific training recommended for production use.",
+        "Interpretation is not allowed as a legal conclusion.",
+    ]))
+    detections = []
+    for detection in list(result.get("detections") or []):
+        item = dict(detection)
+        item.setdefault("model_scope", "general_object_detector")
+        item.setdefault("domain_specific", False)
+        item.setdefault("interpretation_allowed", False)
+        item.setdefault("georeference_available", bool(item.get("geometry")))
+        item.setdefault("raw_class_name", item.get("class_label"))
+        item.setdefault("raw_class_id", None)
+        item.setdefault("pixel_bbox", list(item.get("pixel_bbox") or []))
+        item.setdefault("notes", [])
+        item["notes"] = list(dict.fromkeys(list(item.get("notes") or []) + [_domain_hint_for_workflow(workflow_id)]))
+        detections.append(item)
+    if detections:
+        result["detections"] = detections
+    return result
+
+
 def _maybe_fill_image_from_eo_cache(payload: dict[str, Any]) -> dict[str, Any]:
     enriched = dict(payload)
     if enriched.get("local_image_path"):
@@ -235,7 +286,7 @@ def run_detection(request: dict[str, Any] | None = None) -> dict[str, Any]:
     if cfg["backend"] == "yolo":
         result = _run_yolo_detection(payload, cfg)
         if result.get("success"):
-            return result
+            return _annotate_generic_detector_result(result, str(payload.get("sop_id") or ""))
         fallback = run_detector(payload)
         fallback.setdefault("warnings", [])
         fallback["warnings"] = list(fallback["warnings"]) + [
@@ -244,7 +295,10 @@ def run_detection(request: dict[str, Any] | None = None) -> dict[str, Any]:
         fallback["detector_requested"] = "yolo"
         fallback["used_real_model"] = False
         fallback["degraded_reason"] = result.get("error")
-        return fallback
+        fallback["model_scope"] = "general_object_detector"
+        fallback["domain_specific"] = False
+        fallback["interpretation_allowed"] = False
+        return _annotate_generic_detector_result(fallback, str(payload.get("sop_id") or ""))
 
     result = run_detector(payload)
     detector_used = str(result.get("detector_used") or "mock")
@@ -255,7 +309,7 @@ def run_detection(request: dict[str, Any] | None = None) -> dict[str, Any]:
     if payload.get("image_source") == "eo_cache":
         result["image_source"] = "eo_cache"
         result["used_real_input"] = True
-    return result
+    return _annotate_generic_detector_result(result, str(payload.get("sop_id") or ""))
 
 
 __all__ = ["detector_status", "run_detection"]

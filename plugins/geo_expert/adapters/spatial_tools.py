@@ -8,6 +8,18 @@ from typing import Any
 from .config import dependency_error, postgis_config
 
 _LAYER_ALIASES_PATH = Path(__file__).resolve().parents[1] / "data" / "spatial" / "layer_aliases.json"
+WORKFLOW_LAYER_REQUIREMENTS = {
+    "WF-001": ["cadastral_layer", "agricultural_zone", "building_layer"],
+    "WF-002": ["slope_layer", "hazard_zone"],
+    "WF-003": ["cadastral_layer", "landuse_layer"],
+    "WF-004": ["river_zone"],
+    "WF-005": ["agricultural_zone", "cadastral_layer"],
+    "WF-006": ["landuse_layer"],
+    "WF-007": ["agricultural_zone", "landuse_layer"],
+    "WF-008": ["cadastral_layer", "landuse_layer"],
+    "WF-009": ["hazard_zone", "slope_layer"],
+    "WF-010": ["ecology_network_layer", "sensitive_habitat_layer"],
+}
 
 
 def _load_layer_aliases() -> dict[str, Any]:
@@ -57,6 +69,44 @@ def _resolve_layer_name(name: str) -> dict[str, Any]:
         "geometry_column": None,
         "status": "direct",
         "description": "Direct table reference.",
+    }
+
+
+def spatial_capability_profile() -> dict[str, Any]:
+    alias_map = _load_layer_aliases() or {}
+    grouped = {
+        "cadastral": "missing_data_required",
+        "building": "missing_data_required",
+        "river": "missing_data_required",
+        "hazard": "missing_data_required",
+        "landuse": "missing_data_required",
+        "ecology": "missing_data_required",
+        "zoning_change": "missing_data_required",
+    }
+    alias_checks = []
+    for alias in alias_map.keys():
+        entry = _alias_entry(alias)
+        alias_checks.append(entry)
+        status = str(entry.get("status") or "")
+        if alias in {"cadastral_layer", "land_parcel_layer", "parcels_wgs84", "parcels_twd97"} and status == "resolved":
+            grouped["cadastral"] = "available"
+        if alias == "building_layer" and status == "resolved":
+            grouped["building"] = "available"
+        if alias == "river_zone" and status == "resolved":
+            grouped["river"] = "available"
+        if alias in {"hazard_zone", "slope_layer"} and status == "resolved":
+            grouped["hazard"] = "available"
+        if alias in {"agricultural_zone", "landuse_layer"} and status == "resolved":
+            grouped["landuse"] = "available"
+        if alias in {"ecology_network_layer", "sensitive_habitat_layer"} and status == "resolved":
+            grouped["ecology"] = "available"
+        if alias == "zoning_change_layer" and status == "resolved":
+            grouped["zoning_change"] = "available"
+    return {
+        "success": True,
+        "capability_profile": grouped,
+        "workflow_layer_requirements": WORKFLOW_LAYER_REQUIREMENTS,
+        "alias_entries": alias_checks,
     }
 
 
@@ -165,6 +215,8 @@ def spatial_status() -> dict[str, Any]:
         "public_tables": public_tables,
         "public_views": public_views,
         "geometry_columns": geometry_columns,
+        "capability_profile": spatial_capability_profile().get("capability_profile"),
+        "workflow_layer_requirements": WORKFLOW_LAYER_REQUIREMENTS,
     }
 
 
@@ -214,13 +266,15 @@ def analyze_proximity(geojson_polygon: dict[str, Any], target_table: str, max_di
     if resolved.get("status") == "missing_data_required":
         return {
             "success": False,
-            "error": "missing_data_required",
+            "error": "missing_required_layer",
             "message": resolved.get("description") or f"Missing spatial data for alias: {target_table}",
             "operation": "proximity",
             "used_real_service": False,
             "service": "postgis",
             "alias": target_table,
             "target_table": resolved.get("table"),
+            "required_layer": target_table,
+            "next_action": "import_layer",
         }
     try:
         with engine.connect() as conn:
@@ -271,13 +325,15 @@ def calculate_overlay_intersection(target_table: str, geojson_polygon: dict[str,
     if resolved.get("status") == "missing_data_required":
         return {
             "success": False,
-            "error": "missing_data_required",
+            "error": "missing_required_layer",
             "message": resolved.get("description") or f"Missing spatial data for alias: {target_table}",
             "operation": "intersection",
             "used_real_service": False,
             "service": "postgis",
             "alias": target_table,
             "target_table": resolved.get("table"),
+            "required_layer": target_table,
+            "next_action": "import_layer",
         }
     try:
         with engine.connect() as conn:
@@ -374,6 +430,7 @@ def check_layer_availability(layer_names: list[str] | None = None) -> dict[str, 
             "used_real_service": True,
             "service": "postgis",
             "available_layers": availability,
+            "capability_profile": spatial_capability_profile().get("capability_profile"),
         }
     except Exception as exc:
         return {
@@ -408,11 +465,13 @@ def spatial_query(operation: str, parameters: dict[str, Any] | None = None) -> d
         return analyze_dissolve_union(list(params.get("parcel_ids_list") or []))
     if op == "layer_check":
         return check_layer_availability(list(params.get("layer_names") or []))
+    if op == "capability_show":
+        return spatial_capability_profile()
     return {
         "success": False,
         "error": "unsupported_operation",
         "message": f"Unsupported spatial_query operation: {operation}",
-        "supported_operations": ["buffer", "proximity", "intersection", "dissolve", "layer_check"],
+        "supported_operations": ["buffer", "proximity", "intersection", "dissolve", "layer_check", "capability_show"],
     }
 
 
@@ -422,6 +481,7 @@ __all__ = [
     "analyze_proximity",
     "calculate_overlay_intersection",
     "check_layer_availability",
+    "spatial_capability_profile",
     "spatial_query",
     "spatial_status",
 ]

@@ -6,6 +6,7 @@ import json
 import math
 import os
 import re
+from collections import Counter
 from typing import Any
 from urllib.parse import urlparse
 
@@ -90,6 +91,36 @@ def _normalize_collection_names(raw_collections: Any) -> list[str]:
     return [name for name in names if name]
 
 
+def _collection_metadata_summary(collection: Any) -> dict[str, Any]:
+    metadata = dict(getattr(collection, "metadata", {}) or {})
+    return {
+        "metadata": metadata,
+        "embedding_backend": metadata.get("embedding_backend") or metadata.get("embedding_mode"),
+    }
+
+
+def _summarize_legal_metadata(metadatas: list[dict[str, Any]]) -> dict[str, Any]:
+    law_names = sorted({str(item.get("law_name")) for item in metadatas if item.get("law_name")})
+    legal_text_count = sum(1 for item in metadatas if item.get("source_type") == "legal_text")
+    article_chunks_count = sum(1 for item in metadatas if item.get("chunk_kind") == "article")
+    issue_tags = Counter()
+    for item in metadatas:
+        for tag in item.get("issue_tags") or []:
+            issue_tags[str(tag)] += 1
+    sample_citations = [
+        str(item.get("citation_key") or item.get("law_name") or "")
+        for item in metadatas
+        if item.get("citation_key") or item.get("law_name")
+    ][:5]
+    return {
+        "legal_text_count": legal_text_count,
+        "law_names": law_names,
+        "sample_citations": sample_citations,
+        "article_chunks_count": article_chunks_count,
+        "issue_tags_count": dict(issue_tags),
+    }
+
+
 def probe_chromadb() -> dict[str, Any]:
     cfg = _config()
     heartbeat = _heartbeat(cfg["url"])
@@ -129,26 +160,28 @@ def probe_chromadb() -> dict[str, Any]:
                 checks.append(check)
                 continue
             collection = client.get_collection(selected)
+            summary = _collection_metadata_summary(collection)
+            check["collection_metadata"] = summary["metadata"]
+            check["embedding_backend"] = summary["embedding_backend"]
             try:
                 check["doc_count"] = int(collection.count())
-                check["collection_metadata"] = dict(getattr(collection, "metadata", {}) or {})
-                check["embedding_backend"] = check["collection_metadata"].get("embedding_backend") or check["collection_metadata"].get("embedding_mode")
                 if check["doc_count"] <= 0:
                     check["status"] = "collection_empty"
                     checks.append(check)
                     continue
                 query_result = collection.query(
-                    query_embeddings=[_deterministic_embedding("都市計畫 農業區")],
-                    n_results=1,
+                    query_embeddings=[_deterministic_embedding("農業區 違章工廠 非都市土地使用管制")],
+                    n_results=3,
                     include=["documents", "metadatas", "distances"],
                 )
                 documents = ((query_result.get("documents") or [[]])[0]) or []
-                metadatas = ((query_result.get("metadatas") or [[]])[0]) or []
+                metadatas = [dict(item or {}) for item in (((query_result.get("metadatas") or [[]])[0]) or [])]
                 check["status"] = "success" if documents else "collection_empty"
                 check["query_ok"] = True
                 check["result_count"] = len(documents)
                 check["used_real_service"] = bool(documents)
                 check["sample_metadata"] = metadatas[0] if metadatas else None
+                check.update(_summarize_legal_metadata(metadatas))
             except Exception as exc:
                 check["status"] = "degraded"
                 check["query_ok"] = False

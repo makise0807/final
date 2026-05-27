@@ -120,6 +120,58 @@ def write_workflow_report(result: dict[str, Any], base_dir: str | Path | None = 
     lines.extend(["## Limitations", ""])
     for item in result.get("limitations") or []:
         lines.append(f"- {item}")
+    legal_grounding = dict(result.get("legal_grounding") or {})
+    if legal_grounding:
+        lines.extend(["", "## Legal Basis", ""])
+        for item in legal_grounding.get("citations") or []:
+            lines.append(f"- {item.get('law_name') or item.get('title')}: {item.get('citation') or item.get('article_no')}")
+        lines.extend(["", "## Applicability Checklist", ""])
+        for item in legal_grounding.get("applicability_checklist") or []:
+            lines.append(f"- Issue: {item.get('issue')} | Applicability: {item.get('applicability')} | Missing facts: {', '.join(item.get('facts_missing') or []) or 'None'}")
+        lines.extend(["", "## Human Review Required", "", "- True", "", "## Formality Level", ""])
+        lines.extend(["- preliminary_screening", "- expert_review_draft", "- not_official_decision"])
+    detector_sections = []
+    for step in result.get("steps", []):
+        evidence = step.get("evidence") or {}
+        if evidence.get("model_scope") or evidence.get("detection_limitations"):
+            detector_sections.append(evidence)
+    if detector_sections:
+        lines.extend(["", "## Detection Limitations", ""])
+        for evidence in detector_sections:
+            lines.append(f"- Model scope: {evidence.get('model_scope')}")
+            lines.append(f"- Domain specific: {evidence.get('domain_specific')}")
+            for item in evidence.get("detection_limitations") or []:
+                lines.append(f"- {item}")
+    spatial_capability = dict(result.get("spatial_capability") or {})
+    if spatial_capability:
+        lines.extend(["", "## Spatial Capability", ""])
+        lines.append(f"- Available layers: {', '.join(spatial_capability.get('available_layers') or ['None'])}")
+        lines.append(f"- Missing layers: {', '.join(spatial_capability.get('missing_layers') or ['None'])}")
+        lines.append(f"- Required data for full analysis: {', '.join(spatial_capability.get('required_data') or ['None'])}")
+    if result.get("production_readiness"):
+        readiness = dict(result.get("production_readiness") or {})
+        lines.extend(["", "## Production Readiness", ""])
+        lines.append(f"- Readiness level: {readiness.get('readiness_level')}")
+        lines.append(f"- Score: {readiness.get('score')}")
+        for item in readiness.get("blocking_gaps") or []:
+            lines.append(f"- Blocking gap: {item}")
+        for item in readiness.get("non_blocking_gaps") or []:
+            lines.append(f"- Non-blocking gap: {item}")
+    if result.get("run_manifest"):
+        manifest = dict(result.get("run_manifest") or {})
+        lines.extend(["", "## Data Provenance", ""])
+        for item in manifest.get("data_sources") or []:
+            lines.append(f"- {json.dumps(item, ensure_ascii=False)}")
+        lines.extend(["", "## Approval Required Actions", ""])
+        for item in result.get("approval_required_actions") or manifest.get("approval_required") or ["None"]:
+            lines.append(f"- {item}")
+        lines.extend(["", "## Reproducibility Manifest", ""])
+        lines.append(f"- Run ID: {manifest.get('run_id')}")
+        lines.append(f"- Services used: {json.dumps(manifest.get('services_used') or {}, ensure_ascii=False)}")
+    if result.get("openeo_acquisition"):
+        lines.extend(["", "## GeoTIFF Acquisition", ""])
+        lines.append("- GeoTIFF acquisition requires explicit approval.")
+        lines.append(f"- Acquisition mode: {result.get('openeo_acquisition', {}).get('mode')}")
     if result.get("service_coverage"):
         coverage = result.get("service_coverage") or {}
         lines.extend(["", "## Service Coverage", ""])
@@ -151,6 +203,9 @@ def write_workflow_report(result: dict[str, Any], base_dir: str | Path | None = 
         lines.extend(["", "## Recommended Production Upgrade", ""])
         for item in coverage.get("next_actions") or ["Import missing spatial layers and replace deterministic embeddings for production use."]:
             lines.append(f"- {item}")
+        if coverage.get("production_readiness"):
+            prod = coverage.get("production_readiness") or {}
+            lines.append(f"- Production readiness score: {prod.get('score')}")
     lines.extend(["", "## Disclaimer", "", "Not a formal legal conclusion.", "Not formal satellite analysis.", "", "## Next Recommended Actions", ""])
     for item in result.get("recommended_next_actions") or ["Verify field conditions, parcel status, and permit records before any enforcement or legal conclusion."]:
         lines.append(f"- {item}")

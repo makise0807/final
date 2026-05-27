@@ -150,3 +150,6 @@ py -3.11 -m pytest -q -o addopts="" $files
 - `outputs/` is ignored and untracked
 - Release summary: `C:\Users\34620\OneDrive\Desktop\final\docs\geo_expert_v1_5_release_summary.md`
 - README for delivery: `C:\Users\34620\OneDrive\Desktop\final\docs\geo_expert_readme.md`
+- v1.6 legal grounding is available for citations, applicability checklists, and expert-review-draft reporting
+- v1.6 still does not provide a formal legal conclusion
+- v1.6 adds production readiness scoring and an approval-gated OpenEO / GeoTIFF pipeline that remains prepare-only unless explicitly approved

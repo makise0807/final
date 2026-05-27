@@ -18,6 +18,8 @@ from .geo_database.image_provider_local import load_local_image_fixture
 from .geo_database.image_recognition_detector import run_detector
 from .geo_database.legal_database import search_legal_database as _search_legal_database
 from .geo_database.sop_workflow import match_sop_candidates, retrieve_sop_candidates
+from .openeo_acquisition import create_openeo_acquisition_plan, list_geotiff_cache, run_openeo_acquisition
+from .production import calculate_readiness_score, check_service_health, create_run_manifest, list_cache_policy_entries
 from .workflow_runner import eval_all_workflows, run_workflow
 
 
@@ -881,3 +883,66 @@ def user_data_rag_answer_handler(args: dict, **_kwargs) -> str:
             top_k=int(args.get("top_k", 3)),
         )
     )
+
+
+def legal_audit_handler(args: dict, **_kwargs) -> str:
+    from scripts.audit_geo_expert_legal_rag import audit_legal_rag
+
+    return _json(audit_legal_rag())
+
+
+def legal_applicability_check_handler(args: dict, **_kwargs) -> str:
+    from .legal_grounding import build_applicability_check
+
+    return _json(
+        build_applicability_check(
+            user_request=str(args.get("user_request") or ""),
+            workflow_id=str(args.get("workflow_id") or ""),
+            facts=dict(args.get("facts") or {}),
+        )
+    )
+
+
+def spatial_capability_show_handler(args: dict, **_kwargs) -> str:
+    from .adapters.spatial_tools import spatial_capability_profile
+
+    return _json(spatial_capability_profile())
+
+
+def production_readiness_show_handler(args: dict, **_kwargs) -> str:
+    coverage = dict(args.get("service_coverage") or {})
+    return _json(
+        {
+            "success": True,
+            "production_readiness": calculate_readiness_score(coverage),
+            "cache_policy": list_cache_policy_entries(),
+        }
+    )
+
+
+def run_manifest_create_handler(args: dict, **_kwargs) -> str:
+    return _json(create_run_manifest(dict(args.get("result") or {})))
+
+
+def service_health_check_handler(args: dict, **_kwargs) -> str:
+    return _json(check_service_health())
+
+
+def openeo_acquisition_plan_handler(args: dict, **_kwargs) -> str:
+    return _json(
+        create_openeo_acquisition_plan(
+            args.get("aoi"),
+            dict(args.get("date_range") or {}),
+            [str(item) for item in list(args.get("bands") or [])],
+            int(args.get("resolution") or 10),
+            output_format=str(args.get("output_format") or "GeoTIFF"),
+        )
+    )
+
+
+def openeo_acquisition_run_handler(args: dict, **_kwargs) -> str:
+    return _json(run_openeo_acquisition(dict(args)))
+
+
+def geotiff_cache_list_handler(args: dict, **_kwargs) -> str:
+    return _json(list_geotiff_cache())

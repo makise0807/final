@@ -1,6 +1,6 @@
 # Satellite Workflow Studio v0.2 MVP
 
-Satellite Workflow Studio v0.2 MVP keeps the Geo Expert v1.5 plugin architecture intact and adds a deterministic multi-pack orchestration layer for safe-run satellite workflows.
+Satellite Workflow Studio v0.2 MVP keeps the Geo Expert v1.5 plugin architecture intact and adds a deterministic multi-pack orchestration layer for safe-run satellite workflows. Geo Expert v1.6 extends this with legal grounding, expert-review-draft reporting, production readiness scoring, and an approval-gated OpenEO / GeoTIFF path that remains prepare-only by default.
 
 ## Status
 
