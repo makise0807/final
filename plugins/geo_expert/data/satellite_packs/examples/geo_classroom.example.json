@@ -1,0 +1,13 @@
+{
+  "pack_id": "geo_classroom",
+  "user_request": "請為課堂活動整理可觀察的衛星圖重點與學習問題。",
+  "mode": "safe_run",
+  "inputs": {
+    "aoi": {
+      "west": 120.7,
+      "south": 23.45,
+      "east": 120.72,
+      "north": 23.47
+    }
+  }
+}

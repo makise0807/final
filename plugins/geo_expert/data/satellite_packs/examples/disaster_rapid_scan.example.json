@@ -1,0 +1,13 @@
+{
+  "pack_id": "disaster_rapid_scan",
+  "user_request": "請快速整理可能受影響區域與災後巡查重點。",
+  "mode": "safe_run",
+  "inputs": {
+    "aoi": {
+      "west": 120.7,
+      "south": 23.45,
+      "east": 120.72,
+      "north": 23.47
+    }
+  }
+}

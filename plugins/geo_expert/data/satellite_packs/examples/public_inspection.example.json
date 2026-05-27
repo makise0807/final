@@ -1,0 +1,13 @@
+{
+  "pack_id": "public_inspection",
+  "user_request": "請整理衛星圖中的可疑異常與現勘優先順序。",
+  "mode": "safe_run",
+  "inputs": {
+    "aoi": {
+      "west": 120.7,
+      "south": 23.45,
+      "east": 120.72,
+      "north": 23.47
+    }
+  }
+}

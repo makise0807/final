@@ -22,8 +22,9 @@ def test_user_data_rag_import_search_and_answer(tmp_path: Path) -> None:
         "water frontage buyer risk",
         dataset_ids=[imported["dataset_id"]],
     )
-    assert search["results"]
-    assert search["results"][0]["citation"]
+    assert search["status"] == "ok"
+    assert search["hits"]
+    assert search["citations"]
 
     answer = answer_user_data_question(
         "real_estate_insight",
@@ -31,6 +32,7 @@ def test_user_data_rag_import_search_and_answer(tmp_path: Path) -> None:
         dataset_ids=[imported["dataset_id"]],
     )
     assert answer["success"] is True
+    assert answer["status"] == "ok"
     assert answer["answer"]
     assert answer["citations"]
 
@@ -41,6 +43,6 @@ def test_user_data_rag_no_hallucination_when_empty() -> None:
         "Do not invent an answer when there is no data.",
         dataset_ids=["missing-dataset"],
     )
-    assert answer["status"] == "degraded"
-    assert answer["error"] == "no_user_data_available"
+    assert answer["status"] == "no_user_data_available"
+    assert answer["reason"]
     assert answer["answer"] is None

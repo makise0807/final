@@ -1,0 +1,13 @@
+{
+  "pack_id": "outdoor_safety",
+  "user_request": "請提供戶外活動前的地形、水體與坡地風險提醒。",
+  "mode": "safe_run",
+  "inputs": {
+    "aoi": {
+      "west": 120.7,
+      "south": 23.45,
+      "east": 120.72,
+      "north": 23.47
+    }
+  }
+}

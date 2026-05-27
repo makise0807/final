@@ -1,0 +1,13 @@
+{
+  "pack_id": "real_estate_insight",
+  "user_request": "請提供基地周邊環境、買方風險與可作為銷售亮點的初步觀察。",
+  "mode": "safe_run",
+  "inputs": {
+    "aoi": {
+      "west": 120.7,
+      "south": 23.45,
+      "east": 120.72,
+      "north": 23.47
+    }
+  }
+}

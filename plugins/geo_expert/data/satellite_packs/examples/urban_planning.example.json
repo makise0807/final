@@ -1,0 +1,13 @@
+{
+  "pack_id": "urban_planning",
+  "user_request": "請提供基地周邊土地使用、交通條件與規劃下一步建議。",
+  "mode": "safe_run",
+  "inputs": {
+    "aoi": {
+      "west": 120.7,
+      "south": 23.45,
+      "east": 120.72,
+      "north": 23.47
+    }
+  }
+}

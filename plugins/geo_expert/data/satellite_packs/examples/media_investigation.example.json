@@ -1,0 +1,13 @@
+{
+  "pack_id": "media_investigation",
+  "user_request": "請整理衛星圖線索、待查問題與可補的佐證清單。",
+  "mode": "safe_run",
+  "inputs": {
+    "aoi": {
+      "west": 120.7,
+      "south": 23.45,
+      "east": 120.72,
+      "north": 23.47
+    }
+  }
+}
