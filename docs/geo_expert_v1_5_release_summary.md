@@ -76,6 +76,7 @@ and does not introduce model training.
 ### EO / Satellite
 
 - EO cache images still lack trustworthy AOI sidecar metadata in most cases.
+- The currently available source tree does not expose a trustworthy AOI reconstruction path for the existing cache images, so new GEE preview execute output or a manual verified mapping file is required for precise sidecars.
 - Precise AOI matching is only available when sidecar AOI metadata exists.
 - GEE execute path remains intentionally gated and requires explicit environment enablement plus valid dependency/auth state.
 

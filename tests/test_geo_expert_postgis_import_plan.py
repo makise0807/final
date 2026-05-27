@@ -19,5 +19,6 @@ def test_postgis_import_plan_detects_dump_and_geojson(tmp_path: Path) -> None:
     assert "pg_restore" in methods
     assert "ogr2ogr" in methods
     assert all(item["requires_user_approval"] is True for item in plan["suggested_imports"])
+    assert all("validation_query" in item for item in plan["suggested_imports"])
     assert "resolved_aliases" in plan
     assert "missing_aliases" in plan

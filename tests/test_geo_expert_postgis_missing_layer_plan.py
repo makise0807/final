@@ -10,4 +10,7 @@ def test_postgis_missing_layer_plan_reports_required_data_types(tmp_path) -> Non
     assert missing["building_layer"]["required_data_type"] == "building footprints"
     assert missing["building_layer"]["status"] == "source_missing"
     assert "acceptable_formats" in missing["building_layer"]
+    assert "suggested_source_keywords" in missing["building_layer"]
+    assert "example_target_table" in missing["building_layer"]
+    assert "validation_query" in missing["building_layer"]
     assert missing["building_layer"]["where_to_get_hint"]

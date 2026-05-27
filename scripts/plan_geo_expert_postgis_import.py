@@ -29,6 +29,9 @@ ALIAS_REQUIRED_DATA = {
     "landuse_layer": {"required_data_type": "land-use zoning", "acceptable_formats": ["SHP", "GPKG", "GeoJSON"]},
     "zoning_change_layer": {"required_data_type": "zoning change proposal boundaries", "acceptable_formats": ["SHP", "GPKG", "GeoJSON"]},
 }
+ALIAS_TARGET_TABLE = {
+    alias: f"public.{alias}" for alias in ALIAS_REQUIREMENTS
+}
 ALIAS_WHERE_TO_GET_HINT = {
     "building_layer": "Municipal open data building footprint layer or cadastral building survey export.",
     "river_zone": "Water resources / floodplain authority polygon layer.",
@@ -87,6 +90,15 @@ def _command_preview(path: Path, target_table: str) -> tuple[str, str]:
     return ("metadata_only", f"# review {path}")
 
 
+def _ogr2ogr_template(target_table: str) -> str:
+    return f'ogr2ogr -f PostgreSQL PG:"host=localhost port=5433 dbname=geodb user=geouser" "<SOURCE_FILE>" -nln {target_table} -lco GEOMETRY_NAME=geom -overwrite'
+
+
+def _validation_query(target_table: str) -> str:
+    relation = target_table.replace('"', "")
+    return f"SELECT COUNT(*) AS row_count FROM {relation};"
+
+
 def build_import_plan(source_root: Path = DEFAULT_SOURCE_ROOT) -> dict[str, Any]:
     aliases = _load_aliases()
     relations = _public_relations()
@@ -110,6 +122,10 @@ def build_import_plan(source_root: Path = DEFAULT_SOURCE_ROOT) -> dict[str, Any]
                     "alias": alias,
                     "target_table": table,
                     "status": "source_missing",
+                    "suggested_source_keywords": keywords,
+                    "example_target_table": table or ALIAS_TARGET_TABLE.get(alias, f"public.{alias}"),
+                    "ogr2ogr_command_template": _ogr2ogr_template(table or ALIAS_TARGET_TABLE.get(alias, f"public.{alias}")),
+                    "validation_query": _validation_query(table or ALIAS_TARGET_TABLE.get(alias, f"public.{alias}")),
                     **ALIAS_REQUIRED_DATA.get(alias, {}),
                     "where_to_get_hint": ALIAS_WHERE_TO_GET_HINT.get(alias),
                     "blocked_reason": meta.get("description") or f"No source file found for {alias}.",
@@ -124,9 +140,13 @@ def build_import_plan(source_root: Path = DEFAULT_SOURCE_ROOT) -> dict[str, Any]
                     "source": candidate,
                     "target_table": table or f"public.{alias}",
                     "method": method,
+                    "suggested_source_keywords": keywords,
+                    "example_target_table": table or ALIAS_TARGET_TABLE.get(alias, f"public.{alias}"),
                     **ALIAS_REQUIRED_DATA.get(alias, {}),
                     "where_to_get_hint": ALIAS_WHERE_TO_GET_HINT.get(alias),
                     "command_preview": preview,
+                    "ogr2ogr_command_template": _ogr2ogr_template(table or ALIAS_TARGET_TABLE.get(alias, f"public.{alias}")),
+                    "validation_query": _validation_query(table or ALIAS_TARGET_TABLE.get(alias, f"public.{alias}")),
                     "requires_user_approval": True,
                 }
             )
@@ -135,6 +155,10 @@ def build_import_plan(source_root: Path = DEFAULT_SOURCE_ROOT) -> dict[str, Any]
                 "alias": alias,
                 "target_table": table,
                 "status": "import_candidate_found",
+                "suggested_source_keywords": keywords,
+                "example_target_table": table or ALIAS_TARGET_TABLE.get(alias, f"public.{alias}"),
+                "ogr2ogr_command_template": _ogr2ogr_template(table or ALIAS_TARGET_TABLE.get(alias, f"public.{alias}")),
+                "validation_query": _validation_query(table or ALIAS_TARGET_TABLE.get(alias, f"public.{alias}")),
                 **ALIAS_REQUIRED_DATA.get(alias, {}),
                 "where_to_get_hint": ALIAS_WHERE_TO_GET_HINT.get(alias),
                 "blocked_reason": "Source file found but import requires explicit user approval.",
@@ -149,6 +173,7 @@ def build_import_plan(source_root: Path = DEFAULT_SOURCE_ROOT) -> dict[str, Any]
                 "target_table": "public.*",
                 "method": "pg_restore",
                 "command_preview": _command_preview(Path(next(path for path in found_files if Path(path).suffix.lower() == ".dump")), "public.*")[1],
+                "validation_query": "SELECT table_name FROM information_schema.tables WHERE table_schema='public' ORDER BY table_name;",
                 "requires_user_approval": True,
             }
         )

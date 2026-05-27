@@ -111,6 +111,7 @@ py -3.11 -m pytest -q -o addopts="" $files
 ## Data Gaps
 
 - EO sidecar metadata is missing for most current cache images
+- Current EO cache artifacts in the available source tree do not provide a trustworthy AOI recovery path; precise sidecars will require a new GEE preview execute run or a manually verified mapping file
 - PostGIS still lacks 9 domain layers
 - RAG embedding quality is intentionally offline-safe rather than production semantic quality
 - YOLO path is real but remains a general detector
@@ -140,6 +141,7 @@ py -3.11 -m pytest -q -o addopts="" $files
 - ultralytics missing: install it before expecting real YOLO usage
 - GEE auth missing: keep preview in prepare mode until Earth Engine auth is configured
 - `latest_without_metadata` warning: expected until cache images gain trustworthy AOI sidecars
+- Existing EO cache cannot be safely backfilled with precise AOI unless a new GEE preview execute or a manually verified mapping file is provided
 - outputs still tracked: `git ls-files outputs` should be empty; if not, stop and fix git tracking before release
 
 ## Final Acceptance State

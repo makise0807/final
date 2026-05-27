@@ -139,6 +139,7 @@ Expected:
 ## Known Limitations
 
 - EO cache lacks trustworthy AOI sidecar metadata for the current 10 images
+- Current EO cache sidecars cannot be safely reconstructed from the checked-in source tree alone; a new GEE preview execute or manual verified mapping is needed for precise AOI matching
 - GEE preview execute requires valid Earth Engine auth
 - PostGIS is still missing 9 domain layers beyond parcel-centric coverage
 - Deterministic hash embedding is dev/offline validation quality

@@ -82,3 +82,27 @@ def test_backfill_can_use_reference_index_for_aoi(tmp_path: Path) -> None:
     sidecar = json.loads((cache_dir / "gee_s2_abc123.json").read_text(encoding="utf-8"))
     assert sidecar["aoi"]["west"] == 120.7
     assert sidecar["match_quality"] == "precise_aoi"
+
+
+def test_backfill_can_use_manual_map_for_aoi(tmp_path: Path) -> None:
+    cache_dir = tmp_path / "cache"
+    cache_dir.mkdir()
+    image_path = cache_dir / "example.png"
+    image_path.write_bytes(b"img")
+    manual_map = {
+        "images": [
+            {
+                "filename": "example.png",
+                "aoi": {"west": 120.7, "south": 23.45, "east": 120.72, "north": 23.47},
+                "workflow_hint": "WF-001",
+                "case_id": "sample_taichung_case",
+                "source": "manual_verified",
+            }
+        ]
+    }
+    entries = backfill_mod._normalize_reference_entries(manual_map)
+    payload = backfill_mod.backfill_sidecars(cache_dir=cache_dir, dry_run=False, index_entries=entries)
+    assert payload["with_aoi"] == 1
+    sidecar = json.loads((cache_dir / "example.json").read_text(encoding="utf-8"))
+    assert sidecar["aoi"]["north"] == 23.47
+    assert sidecar["workflow_hint"] == "WF-001"

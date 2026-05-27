@@ -318,6 +318,7 @@ def main() -> int:
     parser.add_argument("--pattern", default="*")
     parser.add_argument("--from-gee-log", default=None)
     parser.add_argument("--from-index", default=None)
+    parser.add_argument("--manual-map", default=None)
     parser.add_argument("--interactive-map-file", default=None)
     parser.add_argument("--output-index", default=os.getenv("GEO_EXPERT_EO_CACHE_INDEX", str(Path("outputs") / "geo_expert" / "eo_cache_index.json")))
     args = parser.parse_args()
@@ -335,7 +336,10 @@ def main() -> int:
 
     gee_log_entries = _normalize_gee_log_entries(_load_jsonish(Path(args.from_gee_log))) if args.from_gee_log else None
     index_entries = _normalize_reference_entries(_load_jsonish(Path(args.from_index))) if args.from_index else None
+    manual_entries = _normalize_reference_entries(_load_jsonish(Path(args.manual_map))) if args.manual_map else None
     interactive_entries = _normalize_reference_entries(_load_jsonish(Path(args.interactive_map_file))) if args.interactive_map_file else None
+    if manual_entries:
+        index_entries = {**(index_entries or {}), **manual_entries}
     if interactive_entries:
         index_entries = {**(index_entries or {}), **interactive_entries}
 
@@ -353,6 +357,7 @@ def main() -> int:
     payload["reference_sources"] = {
         "from_gee_log": args.from_gee_log,
         "from_index": args.from_index,
+        "manual_map": args.manual_map,
         "interactive_map_file": args.interactive_map_file,
     }
     if not effective_dry_run:

@@ -1,0 +1,16 @@
+{
+  "images": [
+    {
+      "filename": "example.png",
+      "aoi": {
+        "west": 120.7,
+        "south": 23.45,
+        "east": 120.72,
+        "north": 23.47
+      },
+      "workflow_hint": "WF-001",
+      "case_id": "sample_taichung_case",
+      "source": "manual_verified"
+    }
+  ]
+}

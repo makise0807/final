@@ -84,3 +84,18 @@ def test_dry_run_reports_sentence_transformers_missing_when_requested(tmp_path: 
     )
     assert payload["success"] is False
     assert str(payload["error"]).startswith("sentence_transformers_")
+
+
+def test_dry_run_accepts_chroma_default_backend(tmp_path: Path) -> None:
+    source_root = tmp_path / "source"
+    regulations_dir = source_root / "data" / "regulations"
+    regulations_dir.mkdir(parents=True)
+    (regulations_dir / "a.txt").write_text("土地使用分區檢核資料", encoding="utf-8")
+    payload = ingest_mod.ingest(
+        "urban_regulations",
+        dry_run=True,
+        source_roots=[source_root],
+        embedding_backend="chroma_default",
+    )
+    assert payload["success"] is True
+    assert payload["embedding"] == "chroma_default"

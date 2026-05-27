@@ -13,6 +13,10 @@ def test_gee_preview_probe_prepare_only(monkeypatch, capsys) -> None:
     monkeypatch.setattr("sys.argv", ["probe"])
     assert probe_mod.main() == 0
     payload = json.loads(capsys.readouterr().out)
+    assert "dependency_available" in payload
+    assert "auth_available" in payload
+    assert "fetch_enabled" in payload
+    assert "execute_required_env" in payload
     assert payload["probe"]["prepare_only"] is True
 
 
@@ -22,6 +26,7 @@ def test_gee_preview_probe_execute_disabled(monkeypatch, capsys) -> None:
     monkeypatch.setattr("sys.argv", ["probe", "--execute"])
     assert probe_mod.main() == 0
     payload = json.loads(capsys.readouterr().out)
+    assert payload["fetch_enabled"] is False
     assert payload["probe"]["error"] == "satellite_acquisition_disabled"
 
 
@@ -50,5 +55,7 @@ def test_gee_preview_probe_mocked_success(monkeypatch, tmp_path: Path, capsys) -
     monkeypatch.setattr("sys.argv", ["probe", "--execute"])
     assert probe_mod.main() == 0
     payload = json.loads(capsys.readouterr().out)
+    assert payload["planned_bbox"]
+    assert payload["next_action"]
     assert payload["probe"]["success"] is True
     assert payload["probe"]["geotiff_download"] is False
