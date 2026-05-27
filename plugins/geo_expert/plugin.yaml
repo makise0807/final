@@ -27,6 +27,13 @@ tools:
   - geo_expert.workflow_route
   - geo_expert.case_plan
   - geo_expert.case_run
+  - geo_expert.pack_list
+  - geo_expert.pack_show
+  - geo_expert.pack_run
+  - geo_expert.user_data_import
+  - geo_expert.user_data_list
+  - geo_expert.user_data_search
+  - geo_expert.user_data_rag_answer
 
 skills:
   - geo-expert-workflow

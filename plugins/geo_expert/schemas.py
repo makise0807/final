@@ -296,3 +296,87 @@ CASE_RUN_SCHEMA = {
         "required": ["user_request"]
     }
 }
+
+PACK_LIST_SCHEMA = {
+    "name": "geo_expert.pack_list",
+    "description": "List Satellite Workflow Studio packs.",
+    "parameters": {"type": "object", "properties": {}}
+}
+
+PACK_SHOW_SCHEMA = {
+    "name": "geo_expert.pack_show",
+    "description": "Show one Satellite Workflow Studio pack.",
+    "parameters": {
+        "type": "object",
+        "properties": {"pack_id": {"type": "string"}},
+        "required": ["pack_id"]
+    }
+}
+
+PACK_RUN_SCHEMA = {
+    "name": "geo_expert.pack_run",
+    "description": "Run one Satellite Workflow Studio pack in deterministic safe mode.",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "pack_id": {"type": "string"},
+            "user_request": {"type": "string"},
+            "inputs": {"type": "object"},
+            "mode": {"type": "string", "enum": ["safe_run", "dry_run"], "default": "safe_run"}
+        },
+        "required": ["pack_id", "user_request"]
+    }
+}
+
+USER_DATA_IMPORT_SCHEMA = {
+    "name": "geo_expert.user_data_import",
+    "description": "Import runtime user data for one Satellite Workflow Studio pack.",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "pack_id": {"type": "string"},
+            "source_files": {"type": "array", "items": {"type": "string"}},
+            "embedding_backend": {"type": "string", "enum": ["hash", "sentence_transformers", "chroma_default"], "default": "hash"}
+        },
+        "required": ["pack_id", "source_files"]
+    }
+}
+
+USER_DATA_LIST_SCHEMA = {
+    "name": "geo_expert.user_data_list",
+    "description": "List imported runtime user datasets for Satellite Workflow Studio.",
+    "parameters": {
+        "type": "object",
+        "properties": {"pack_id": {"type": "string"}}
+    }
+}
+
+USER_DATA_SEARCH_SCHEMA = {
+    "name": "geo_expert.user_data_search",
+    "description": "Search imported runtime user data with citations.",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "pack_id": {"type": "string"},
+            "query": {"type": "string"},
+            "dataset_ids": {"type": "array", "items": {"type": "string"}},
+            "top_k": {"type": "integer", "default": 5}
+        },
+        "required": ["pack_id", "query"]
+    }
+}
+
+USER_DATA_RAG_ANSWER_SCHEMA = {
+    "name": "geo_expert.user_data_rag_answer",
+    "description": "Answer using imported runtime user data only, with citations and no hallucinated fallback.",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "pack_id": {"type": "string"},
+            "query": {"type": "string"},
+            "dataset_ids": {"type": "array", "items": {"type": "string"}},
+            "top_k": {"type": "integer", "default": 3}
+        },
+        "required": ["pack_id", "query"]
+    }
+}

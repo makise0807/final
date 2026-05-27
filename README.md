@@ -2,6 +2,15 @@
 
 > A Hermes-native geospatial expert workflow plugin for EO preview, PostGIS spatial checks, legal RAG, YOLO-assisted image review, and case planning.
 
+## Satellite Workflow Studio v0.1
+
+Geo Expert now includes a deterministic `Satellite Workflow Studio` layer for multi-domain pack orchestration. It adds pack-based workflows such as real estate insight, geo classroom, public inspection, agriculture monitoring, disaster rapid scan, ESG environment, outdoor safety, media investigation, urban planning, and climate/land change without changing Hermes core or turning Geo Expert into built-in core tools.
+
+See:
+
+- [docs/satellite_workflow_studio.md](C:\Users\34620\OneDrive\Desktop\final\docs\satellite_workflow_studio.md)
+- [docs/geo_expert_readme.md](C:\Users\34620\OneDrive\Desktop\final\docs\geo_expert_readme.md)
+
 ## Status
 
 - Status: `v1.5 release candidate`

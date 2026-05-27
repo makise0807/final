@@ -169,6 +169,62 @@ def register(ctx) -> None:
         description="Run a collaborative Geo Expert case workflow with a report package.",
         emoji="play",
     )
+    ctx.register_tool(
+        name="geo_expert.pack_list",
+        toolset="geo_expert",
+        schema=schemas.PACK_LIST_SCHEMA,
+        handler=tools.pack_list_handler,
+        description="List Satellite Workflow Studio packs.",
+        emoji="list",
+    )
+    ctx.register_tool(
+        name="geo_expert.pack_show",
+        toolset="geo_expert",
+        schema=schemas.PACK_SHOW_SCHEMA,
+        handler=tools.pack_show_handler,
+        description="Show one Satellite Workflow Studio pack.",
+        emoji="book",
+    )
+    ctx.register_tool(
+        name="geo_expert.pack_run",
+        toolset="geo_expert",
+        schema=schemas.PACK_RUN_SCHEMA,
+        handler=tools.pack_run_handler,
+        description="Run one Satellite Workflow Studio pack in deterministic safe mode.",
+        emoji="play",
+    )
+    ctx.register_tool(
+        name="geo_expert.user_data_import",
+        toolset="geo_expert",
+        schema=schemas.USER_DATA_IMPORT_SCHEMA,
+        handler=tools.user_data_import_handler,
+        description="Import runtime user data for one Satellite Workflow Studio pack.",
+        emoji="upload",
+    )
+    ctx.register_tool(
+        name="geo_expert.user_data_list",
+        toolset="geo_expert",
+        schema=schemas.USER_DATA_LIST_SCHEMA,
+        handler=tools.user_data_list_handler,
+        description="List imported runtime user datasets.",
+        emoji="folder",
+    )
+    ctx.register_tool(
+        name="geo_expert.user_data_search",
+        toolset="geo_expert",
+        schema=schemas.USER_DATA_SEARCH_SCHEMA,
+        handler=tools.user_data_search_handler,
+        description="Search imported runtime user data with citations.",
+        emoji="search",
+    )
+    ctx.register_tool(
+        name="geo_expert.user_data_rag_answer",
+        toolset="geo_expert",
+        schema=schemas.USER_DATA_RAG_ANSWER_SCHEMA,
+        handler=tools.user_data_rag_answer_handler,
+        description="Answer from imported runtime user data only.",
+        emoji="quote",
+    )
 
     skill_path = PLUGIN_ROOT / "skills" / "geo" / "geo-expert-workflow" / "SKILL.md"
     ctx.register_skill(

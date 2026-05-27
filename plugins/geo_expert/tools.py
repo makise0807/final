@@ -806,3 +806,78 @@ def case_run_handler(args: dict, **_kwargs) -> str:
     result = execute_case_workflow_plan(plan, mode=mode, inputs=inputs)
     result["case_plan"] = plan
     return _json(result)
+
+
+def pack_list_handler(args: dict, **_kwargs) -> str:
+    from .satellite_workflows.pack_registry import list_packs
+
+    return _json(list_packs())
+
+
+def pack_show_handler(args: dict, **_kwargs) -> str:
+    from .satellite_workflows.pack_registry import load_pack
+
+    return _json(load_pack(str(args.get("pack_id") or "")))
+
+
+def pack_run_handler(args: dict, **_kwargs) -> str:
+    from .satellite_workflows.pack_runner import run_pack
+
+    return _json(
+        run_pack(
+            str(args.get("pack_id") or ""),
+            str(args.get("user_request") or ""),
+            inputs=dict(args.get("inputs") or {}),
+            mode=str(args.get("mode") or "safe_run"),
+        )
+    )
+
+
+def user_data_import_handler(args: dict, **_kwargs) -> str:
+    from .satellite_workflows.pack_registry import load_pack
+    from .user_data.user_data_ingest import import_user_data
+
+    loaded = load_pack(str(args.get("pack_id") or ""))
+    if not loaded.get("success"):
+        return _json(loaded)
+    return _json(
+        import_user_data(
+            pack=dict(loaded["pack"]),
+            source_files=[str(item) for item in list(args.get("source_files") or [])],
+            embedding_backend=str(args.get("embedding_backend") or "hash"),
+        )
+    )
+
+
+def user_data_list_handler(args: dict, **_kwargs) -> str:
+    from .user_data.user_data_store import list_datasets
+
+    pack_id = str(args.get("pack_id") or "").strip() or None
+    datasets = list_datasets(pack_id)
+    return _json({"success": True, "datasets": datasets, "count": len(datasets)})
+
+
+def user_data_search_handler(args: dict, **_kwargs) -> str:
+    from .user_data.user_data_rag import search_user_data
+
+    return _json(
+        search_user_data(
+            str(args.get("pack_id") or ""),
+            str(args.get("query") or ""),
+            dataset_ids=[str(item) for item in list(args.get("dataset_ids") or [])],
+            top_k=int(args.get("top_k", 5)),
+        )
+    )
+
+
+def user_data_rag_answer_handler(args: dict, **_kwargs) -> str:
+    from .user_data.user_data_rag import answer_user_data_question
+
+    return _json(
+        answer_user_data_question(
+            str(args.get("pack_id") or ""),
+            str(args.get("query") or ""),
+            dataset_ids=[str(item) for item in list(args.get("dataset_ids") or [])],
+            top_k=int(args.get("top_k", 3)),
+        )
+    )
